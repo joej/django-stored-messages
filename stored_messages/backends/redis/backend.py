@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 from django.utils import timezone
 from django.utils.encoding import force_text
 from django.core.serializers.json import DjangoJSONEncoder
+from django.contrib.messages.utils import get_level_tags
+
 
 import json
 from collections import namedtuple
@@ -19,9 +21,10 @@ try:
 except ImportError:
     pass
 
+LEVEL_TAGS = get_level_tags()
 
-Message = namedtuple('Message', ['id', 'message', 'level', 'tags', 'date', 'url'])
-
+#Message = namedtuple('Message', ['id', 'message', 'level', 'tags', 'date', 'url'])
+Message = namedtuple('Message', ['id', 'message', 'level', 'level_tag', 'tags', 'date', 'url'])
 
 class RedisBackend(StoredMessagesBackend):
     """
@@ -74,8 +77,19 @@ class RedisBackend(StoredMessagesBackend):
 
         fingerprint = r + msg_text
 
+        # - deal with message tags
+        level_tag = LEVEL_TAGS.get(level, '')
+        if extra_tags and level_tag:
+            tags = ' '.join([extra_tags, level_tag])
+        elif extra_tags:
+            tags = extra_tags
+        else:
+            tags = level_tag
+
         msg_id = hashlib.sha256(fingerprint.encode('ascii', 'ignore')).hexdigest()
-        return Message(id=msg_id, message=msg_text, level=level, tags=extra_tags, date=r, url=url)
+        #return Message(id=msg_id, message=msg_text, level=level, tags=extra_tags, date=r, url=url)
+        return Message(id=msg_id, message=msg_text, level=level, level_tag=level_tag, tags=tags, date=r, url=url)
+
 
     def inbox_list(self, user):
         if user.is_anonymous():

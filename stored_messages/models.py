@@ -5,8 +5,34 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.messages.utils import get_level_tags
 
 from .settings import stored_messages_settings
+
+LEVEL_TAGS = get_level_tags()
+
+
+class MessageManager(models.Manager):
+    """
+    This custom manager for our Message model allows us to better emulate
+    the behavior of builtin Message objects by automatically including the
+    applicable level_tag, if available, in the message's tags.
+    """
+    def create_message(self, *args, **kwargs):
+        message = self.create(**kwargs)
+        tags = message.tags
+        level_tag = message.level_tag
+
+        if tags and level_tag:
+            tags = ' '.join([tags, level_tag])
+        elif tags:
+            tags = tags
+        else:
+            tags = level_tag
+
+        message.tags = tags
+        message.save()
+        return message
 
 
 @python_2_unicode_compatible
@@ -21,9 +47,14 @@ class Message(models.Model):
     url = models.URLField(null=True, blank=True)
     date = models.DateTimeField(default=timezone.now)
 
+    # use the extended model  manager
+    objects = MessageManager()
+
     def __str__(self):
         return self.message
-
+    @property
+    def level_tag(self):
+        return LEVEL_TAGS.get(self.level, '')
 
 @python_2_unicode_compatible
 class MessageArchive(models.Model):

@@ -53,7 +53,8 @@ class DefaultBackend(StoredMessagesBackend):
         }
         if date:
             kwargs['date'] = date
-        m_instance = Message.objects.create(**kwargs)
+        #m_instance = Message.objects.create(**kwargs)
+        m_instance = Message.objects.create_message(**kwargs)
         return m_instance
 
     def archive_store(self, users, msg_instance):
